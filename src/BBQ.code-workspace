@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "BBQ",
+			"path": "../../BBQ"
+		},
+		{
+			"name": "BBQ Display",
+			"path": ".."
+		},
+		{
+			"name": "T-Display-S3",
+			"path": "../../../../../Git/T-Display-S3"
+		}
+	],
+	"settings": {}
+}
