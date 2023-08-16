@@ -78,8 +78,8 @@ void welcomeScreen() {
     centerText(tft, "BBQ Controller", lineHeight + (lineHeight - 16) * 0.5);
     tft.println("BBQ Controller");
 
-    centerText(tft, "Vamos Defumar o Mundo!", 2 * lineHeight + (lineHeight - 16) * 0.5);
-    typewriterEffect(tft, "Vamos Defumar o Mundo!");
+    centerText(tft, "Vamos Defumar o Mundo!!!", 2 * lineHeight + (lineHeight - 16) * 0.5);
+    typewriterEffect(tft, "Vamos Defumar o Mundo!!!");
 
 
     if (WiFi.status() == WL_CONNECTED) {

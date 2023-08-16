@@ -1,23 +1,32 @@
 #include "BBQCure.h"
 #include "MenuControl.h"
+#include "TemperatureControl.h"
 #include <Arduino.h>
 
-// Definindo 4 etapas de cura
+//Definindo 4 etapas de cura
 const CureStage cureStages[4] = {
-    {75, 2700000},  // 75°C por 45 minutos
+    {75, 3600000},   // 75°C por 60 minutos
     {90, 2700000},  // 90°C por 45 minutos
     {105, 2700000},  // 105°C por 45 minutos
     {125, 7200000}  // 125°C por 2 horas
 };
 
-void bbqCureProcess(SystemStatus& sysStat, TFT_eSPI& tft, Bounce& encoderButton, RotaryEncoder& encoder) {
-    static bool isCureProcessInitialized = false; // Flag para verificar se o processo foi inicializado
 
+
+
+
+const int16_t COLOR_BACKGROUND = TFT_BLACK;
+const int16_t COLOR_TEXT = TFT_WHITE;
+
+static bool isCureProcessInitialized = false;   // Flag para verificar se o processo foi inicializado
+static bool isCompletionScreenActive = false;   // Adicione esta linha para detectar quando a mensagem de conclusão está na tela
+
+void bbqCureProcess(SystemStatus& sysStat, TFT_eSPI& tft, Bounce& encoderButton, RotaryEncoder& encoder) {
     if (!isCureProcessInitialized) {
         // Inicializar a tela do processo de cura
         initializeCureScreen(tft);
         
-        // Coloque aqui o código de inicialização, como definir o primeiro estágio e outras coisas que você deseja fazer apenas uma vez no início do processo.
+        // Código de inicialização
         sysStat.cureState.currentStage = 0;
         sysStat.cureState.stageStartTime = millis();
         sysStat.bbqTemperature = cureStages[sysStat.cureState.currentStage].temperature;
@@ -32,99 +41,97 @@ void bbqCureProcess(SystemStatus& sysStat, TFT_eSPI& tft, Bounce& encoderButton,
             // Finaliza o processo
             sysStat.cureState.completed = true;
             tft.fillScreen(TFT_BLACK);
-            tft.setCursor(10, tft.height() / 2);
+
+            int textYPosition = tft.height() / 2 - tft.fontHeight();
+            tft.setCursor(10, textYPosition);
             tft.setTextColor(TFT_WHITE);
-            tft.print("Cure Process Completed");
-            delay(5000);
-            sysStat.cureState.currentStage = -1; // Reset para a próxima chamada
-            isCureProcessInitialized = false;
-            returnMenu(sysStat, encoder, encoderButton, tft);
+            tft.print("Cure Process");
+            tft.setCursor(10, textYPosition + tft.fontHeight());
+            tft.print("Completed");
+            resetSystem(sysStat);
+            
+            isCompletionScreenActive = true;  // Defina esta variável como true quando a mensagem de conclusão estiver na tela
         } else {
             sysStat.bbqTemperature = cureStages[sysStat.cureState.currentStage].temperature;
         }
     }
 
-    if (millis() - sysStat.lastTempUpdateCure >= 1000) {  
-        // Seu código de atualização da tela aqui, assim como você fez com monitor.
+    if (!isCompletionScreenActive && millis() - sysStat.lastTempUpdateCure >= 500) {  // Adicione a verificação para isCompletionScreenActive aqui
         int remainingSeconds = (cureStages[sysStat.cureState.currentStage].duration - (millis() - sysStat.cureState.stageStartTime)) / 1000;
         updateCureValues(sysStat, tft, cureStages[sysStat.cureState.currentStage].temperature, sysStat.cureState.currentStage, remainingSeconds);
         sysStat.lastTempUpdateCure = millis();
     }
 
-    // Adicione aqui qualquer outro código que você quer que seja executado em cada passagem por bbqCureProcess, talvez verificação de botões, etc.
     if (encoderButton.update() && encoderButton.fell()) {
-        // Se o botão for pressionado, finalize o processo e retorne ao menu
+        delay(200);
+        sysStat.cureState.currentStage = -1;
         isCureProcessInitialized = false;
-        tft.setTextSize(2);
-        tft.setTextColor(TFT_DARKGREY);
-        tft.setCursor(10, 140);
+        sysStat.cureProcessMode = false;
+        isCompletionScreenActive = false;  // Redefina para false ao sair do modo de conclusão
+        resetSystem(sysStat);
         tft.print("Return Menu            ");
         delay(500);
         returnMenu(sysStat, encoder, encoderButton, tft);
     }
 }
 
+
+
+void drawCenteredTextCure(TFT_eSPI& tft, int x, int y, int width, const char* text) {
+    int16_t textWidth = tft.textWidth(text);
+    int16_t textHeight = tft.fontHeight();
+    int16_t xOffset = (width - textWidth) / 2;
+    tft.setCursor(x + xOffset, y);
+    tft.print(text);
+}
+
 void initializeCureScreen(TFT_eSPI& tft) {
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextSize(2); 
-    tft.setTextColor(TFT_WHITE); 
+    tft.fillScreen(COLOR_BACKGROUND);
+    tft.setTextSize(3);
+    tft.setTextColor(COLOR_TEXT);
 
-    // Etapa atual
     tft.setCursor(10, 20);
-    tft.print("Current Stage: ");
+    tft.print("Stage: ");
 
-    // Temperatura da etapa
     tft.setCursor(10, 50);
-    tft.print("Stage Temp: ");
-    tft.print("C");
+    tft.print("Stg Temp: ");
 
-    // Temperatura atual
     tft.setCursor(10, 80);
-    tft.print("Current Temp: ");
-    tft.print("C");
+    tft.print("BBQ Temp: ");
 
-    // Nova linha mostrando o valor da variável sysStat.bbqTemperature
     tft.setCursor(10, 110);
-    tft.print("Variavel: ");
-    tft.print("C");
-
-    // Tempo restante
-    tft.setCursor(10, 140);
-    tft.print("Time Remaining: ");
+    tft.print("Rem Time: ");
 }
 
 void updateCureValues(SystemStatus& sysStat, TFT_eSPI& tft, int setTemperature, int currentStage, int remainingSeconds) {
     char buffer[30];
-    
+    tft.setTextSize(3);
+    int rectWidth = tft.width() - 180;
+    int rectHeight = tft.fontHeight() * 3; // Considerando o tamanho 3 da fonte
+
     // Atualizar etapa atual
-    tft.fillRect(170, 20, 100, 30, TFT_BLACK);  // Limpa o texto anterior
-    tft.setCursor(170, 20);
     snprintf(buffer, sizeof(buffer), "%d", currentStage + 1);
-    tft.print(buffer);
+    tft.fillRect(180, 20, rectWidth, rectHeight, COLOR_BACKGROUND);
+    tft.setTextColor(COLOR_TEXT);
+    drawCenteredTextCure(tft, 180, 20, rectWidth, buffer);
 
     // Atualizar temperatura setada na etapa
-    tft.fillRect(140, 50, 100, 30, TFT_BLACK);  // Limpa o texto anterior
-    tft.setCursor(140, 50);
     snprintf(buffer, sizeof(buffer), "%dC", setTemperature);
-    tft.print(buffer);
+    tft.fillRect(180, 50, rectWidth, rectHeight, COLOR_BACKGROUND);
+    tft.setTextColor(COLOR_TEXT);
+    drawCenteredTextCure(tft, 180, 50, rectWidth, buffer);
 
     // Atualizar temperatura atual
-    tft.fillRect(170, 80, 100, 30, TFT_BLACK);  // Limpa o texto anterior
-    tft.setCursor(170, 80);
     snprintf(buffer, sizeof(buffer), "%dC", sysStat.calibratedTemp);
-    tft.print(buffer);
-
-    // Atualizar valor da variável sysStat.bbqTemperature
-    tft.fillRect(140, 110, 100, 30, TFT_BLACK);  // Limpa o texto anterior
-    tft.setCursor(140, 110);
-    snprintf(buffer, sizeof(buffer), "%dC", sysStat.bbqTemperature);
-    tft.print(buffer);
+    tft.fillRect(180, 80, rectWidth, rectHeight, COLOR_BACKGROUND);
+    tft.setTextColor(COLOR_TEXT);
+    drawCenteredTextCure(tft, 180, 80, rectWidth, buffer);
 
     // Atualizar tempo restante
-    tft.fillRect(230, 140, 100, 30, TFT_BLACK);  // Limpa o texto anterior
-    tft.setCursor(230, 140);
     int minutes = remainingSeconds / 60;
     int seconds = remainingSeconds % 60;
-    snprintf(buffer, sizeof(buffer), "%dmin %ds", minutes, seconds);
-    tft.print(buffer);
+    snprintf(buffer, sizeof(buffer), "%dm %ds", minutes, seconds);
+    tft.fillRect(180, 110, rectWidth, rectHeight, COLOR_BACKGROUND);
+    tft.setTextColor(COLOR_TEXT);
+    drawCenteredTextCure(tft, 180, 110, rectWidth, buffer);
 }
