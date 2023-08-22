@@ -1,6 +1,8 @@
 #include <DisplayControl.h>
 #include <WiFi.h>
 #include <logo.h>
+#include "FreeRTOS.h"
+
 
 // Constantes
 const int WELCOME_SCREEN_DELAY = 2000;
@@ -48,12 +50,8 @@ void typewriterEffect(TFT_eSPI& tft, const String& text) {
     }
 }
 
-
-
 void welcomeScreen() {
     tft.fillScreen(TFT_BLACK); // Limpa a tela
-   
-
     // Exibe a imagem
     int imageWidth = 170;
     int imageHeight = 170;
@@ -92,7 +90,7 @@ void welcomeScreen() {
 }
 
 void displayInformation(SystemStatus& sysStat, RotaryEncoder& encoder, Bounce& encoderButton, TFT_eSPI& tft) {
-    tft.fillScreen(TFT_WHITE);  // Limpa a tela
+    tft.fillScreen(TFT_LIGHTGREY);  // Limpa a tela
     tft.setTextColor(TFT_BLACK); // Cor do texto
 
     // IP
@@ -112,6 +110,19 @@ void displayInformation(SystemStatus& sysStat, RotaryEncoder& encoder, Bounce& e
     tft.print("Author: ");
     tft.setCursor(100, 80);
     tft.print(AUTHOR_NAME);
+
+    // Informação da pilha
+    UBaseType_t stackLeft = uxTaskGetStackHighWaterMark(NULL);
+    tft.setCursor(10, 110);
+    tft.print("Stack Left: ");
+    tft.setCursor(150, 110);
+    if (stackLeft < 200) {
+        tft.setTextColor(TFT_RED); // Cor vermelha se estiver abaixo do limiar
+    } else {
+        tft.setTextColor(TFT_GREEN); // Cor verde se estiver acima do limiar
+    }
+    tft.print(stackLeft);
+    tft.setTextColor(TFT_BLACK); // Resetar cor do texto para preto para qualquer texto posterior
 
     // Aguarda botão ser pressionado
     unsigned long startTime = millis();

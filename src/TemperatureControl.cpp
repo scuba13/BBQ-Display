@@ -3,8 +3,9 @@
 #include <Arduino.h>
 
 MAX6675 thermocouple(MAX6675_SCK, MAX6675_CS, MAX6675_SO);  // Instanciação da variável
+MAX6675 thermocoupleP(MAX6675_SCK_P, MAX6675_CS_P, MAX6675_SO_P);  // Instanciação da variável
 
-
+// BBQ Collection Functions
 int getCalibratedTemp(MAX6675 &thermocouple, SystemStatus &sysStat) {
   float temp = thermocouple.readCelsius() + sysStat.tempCalibration;
   sysStat.tempSamples[sysStat.nextSampleIndex] = temp;
@@ -58,24 +59,6 @@ void controlTemperature(SystemStatus& sysStat) {
   collectSample(sysStat);
 }
 
-void resetSystem(SystemStatus& sysStat) {
-  digitalWrite(RELAY_PIN, LOW);
-  sysStat.isRelayOn = false;
-  sysStat.bbqTemperature = 0;
-
-  // Reset variáveis de média
-  sysStat.startAverage = false;
-  sysStat.averageTemp = 0;
-  sysStat.numSamples = 0;
-  sysStat.hasReachedSetTemp = false;
-  
-  // Apaga as amostras
-  for (int i = 0; i < NUM_SAMPLES; i++) {
-    sysStat.tempSamples[i] = 0;
-  }
-}
-
-
 void addSample(int temp, SystemStatus& sysStat) {
   sysStat.samples[sysStat.sampleIndex] = temp;
   sysStat.sampleIndex = (sysStat.sampleIndex + 1) % MOVING_AVERAGE_SIZE;
@@ -107,5 +90,49 @@ void collectSample(SystemStatus& sysStat) {
   }
 }
 
+// Protein Collection Functions
+int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat) {
+  float temp = thermocoupleP.readCelsius();
+  sysStat.tempSamplesP[sysStat.nextSampleIndexP] = temp;
+  sysStat.nextSampleIndexP = (sysStat.nextSampleIndexP + 1) % NUM_SAMPLES;
+  if (sysStat.numSamplesP < NUM_SAMPLES) {
+    sysStat.numSamplesP++;
+  }
+
+  float sum = 0;
+  for (int i = 0; i < sysStat.numSamplesP; i++) {
+    sum += sysStat.tempSamplesP[i];
+  }
+
+  // Aqui, primeiro calculamos a nova temperatura calibrada
+  int newCalibratedTempP = (int)round(sum / sysStat.numSamplesP);
+
+  // Atualiza a temperatura calibrada na estrutura sysStat
+  sysStat.calibratedTempP = newCalibratedTempP;
+
+  return sysStat.calibratedTempP;
+}
+
+//Reset the variables
+void resetSystem(SystemStatus& sysStat) {
+  digitalWrite(RELAY_PIN, LOW);
+  sysStat.isRelayOn = false;
+  sysStat.bbqTemperature = 0;
+  sysStat.proteinTemperature = 0;
+
+  // Reset variáveis de média
+  sysStat.startAverage = false;
+  sysStat.averageTemp = 0;
+  sysStat.numSamples = 0;
+  sysStat.hasReachedSetTemp = false;
+  
+  // Reseta o índice de amostras
+  sysStat.sampleIndex = 0;
+
+  // Apaga as amostras
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    sysStat.tempSamples[i] = 0;
+  }
+}
 
 

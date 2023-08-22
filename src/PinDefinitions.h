@@ -9,6 +9,10 @@
 #define MAX6675_CS 44
 #define MAX6675_SCK 18
 
+#define MAX6675_SO_P 10
+#define MAX6675_CS_P 11
+#define MAX6675_SCK_P 12
+
 #define RELAY_PIN 13
 
 

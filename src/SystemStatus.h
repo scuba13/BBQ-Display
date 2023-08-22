@@ -17,9 +17,6 @@ struct SystemStatus {
     int bbqTemperature = 0;
     int minBBQTemp = 30;
     int maxBBQTemp = 200;
-    float tempSamples[NUM_SAMPLES];
-    int nextSampleIndex = 0;
-    int numSamples = 0;
     bool isRelayOn = false;
     unsigned long lastDebounceTime = 0;
     unsigned long lastTempUpdateMonitor = 0;
@@ -32,9 +29,20 @@ struct SystemStatus {
     bool startAverage = false;
     int averageTemp = 0;
     bool hasReachedSetTemp = false;
-    int calibratedTemp;
     int proteinTemperature = 0;
     CureState cureState;
+
+    //BBQ Variables Temp
+    float tempSamples[NUM_SAMPLES];
+    int nextSampleIndex = 0;
+    int numSamples = 0;
+    int calibratedTemp;
+
+     //Protein Variables Temp
+    float tempSamplesP[NUM_SAMPLES];
+    int nextSampleIndexP = 0;
+    int numSamplesP = 0;
+    int calibratedTempP;
    
 
 };

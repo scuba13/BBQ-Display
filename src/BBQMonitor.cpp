@@ -43,6 +43,9 @@ void initializeMonitorScreen(TFT_eSPI& tft) {
         
     tft.setCursor(10, 110);
     tft.print("AVG 3H: ");
+
+    tft.setCursor(10, 140);
+    tft.print("Prt Temp: ");
 }
 
 // Função auxiliar para definir a cor baseada na comparação com Set Temp
@@ -102,6 +105,19 @@ void updateMonitorValues(SystemStatus& sysStat, TFT_eSPI& tft) {
         tft.setTextColor(COLOR_TEXT_INACTIVE);
         drawCenteredText(tft, 180, 110, rectWidth, "--");
     }
+
+       // Atualizar valor da Prt Temp e sua cor
+    snprintf(tempBuffer, sizeof(tempBuffer), "%dC", sysStat.calibratedTempP);
+    tft.fillRect(180, 140, rectWidth, rectHeight, COLOR_BACKGROUND);
+    if (sysStat.proteinTemperature > 0) {
+        setTempColor(tft, sysStat.calibratedTempP, sysStat.proteinTemperature);
+        drawCenteredText(tft, 180, 140, rectWidth, tempBuffer);
+    } else {
+        tft.setTextColor(COLOR_TEXT_INACTIVE);
+        drawCenteredText(tft, 180, 140, rectWidth, "--");
+    }
+
+    
 }
 
 void monitor(SystemStatus& sysStat, TFT_eSPI& tft, Bounce& encoderButton, RotaryEncoder& encoder) {
@@ -121,7 +137,7 @@ void monitor(SystemStatus& sysStat, TFT_eSPI& tft, Bounce& encoderButton, Rotary
         delay(200);
         tft.setCursor(10, 140);
         tft.setTextColor(COLOR_TEXT_INACTIVE);
-        tft.print("Return Menu            ");
+        //tft.print("Return Menu            ");
         delay(500);
         sysStat.monitorMode = false;
         isMonitorInitialized = false;
